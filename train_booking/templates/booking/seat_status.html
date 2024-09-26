@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Seat Booking</title>
+    <style>
+        .seat {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            text-align: center;
+            line-height: 30px;
+            display: inline-block;
+            border: 1px solid #000;
+        }
+        .available { background-color: lightgreen; }
+        .booked { background-color: lightcoral; }
+        .align{text-align:center;}
+        body{background-color: #DEE5D4;}
+        .size{font-size:24px;}
+
+    </style>
+</head>
+<body>
+    <h1  class="align">Seat Booking System</h1>
+
+    <div id="seat-display"class="align">
+    </div>
+
+    <h2 class="align">Book Seats</h2>
+    <form id="booking-form" class="align">
+        <label for="num_seats" class="size">Enter number of seats to book:</label>
+        <input type="number" id="num_seats" name="num_seats" min="1" max="7" class="size">
+        <button type="submit" class="size">Book</button>
+    </form>
+
+    <div id="message"></div>
+
+
+    <h2 class="align">Your Previously Booked Seats:</h2>
+    <div id="previous-seats" class="align size"></div>
+
+    <script>
+        // Function to update seat display dynamically
+        function updateSeatDisplay(allSeats, bookedSeats) {
+            const seatDisplay = document.getElementById('seat-display');
+            seatDisplay.innerHTML = '';  // Clear the existing seats
+
+            allSeats.forEach(function(seat) {
+                const seatDiv = document.createElement('div');
+                seatDiv.className = 'seat ' + (seat.is_booked ? 'booked' : 'available');
+                seatDiv.innerHTML = seat.seat_number;
+                seatDisplay.appendChild(seatDiv);
+
+                // Add a line break after every 7 seats (except the last one)
+                if (seat.seat_number % 7 === 0 && seat.seat_number !== 80) {
+                    seatDisplay.appendChild(document.createElement('br'));
+                }
+            });
+
+            // Display previously booked seats
+            const previousSeatsDiv = document.getElementById('previous-seats');
+            if (bookedSeats.length > 0) {
+                previousSeatsDiv.innerHTML = `Seats booked: ${bookedSeats.join(', ')}`;
+            } else {
+                previousSeatsDiv.innerHTML = 'No seats currently booked.';
+            }
+        }
+        
+        // Fetch current seat status and display on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch("{% url 'book_seats' %}")
+                .then(response => response.json())
+                .then(data => {
+                    updateSeatDisplay(data.all_seats, data.booked_seats);
+                });
+        });
+
+        // Handle seat booking form submission
+        document.getElementById('booking-form').addEventListener('submit', function (e) {
+            e.preventDefault();
+            const numSeats = document.getElementById('num_seats').value;
+
+            fetch("{% url 'book_seats' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: `num_seats=${numSeats}`
+            }).then(response => response.json())
+            .then(data => {
+                const messageDiv = document.getElementById('message');
+                if (data.seats) {
+                    //const seatCount = data.seats.length;
+                    //messageDiv.innerHTML = `Seats booked: ${data.seats.join(', ')} <br> Total seats booked: ${seatCount}`;
+                    messageDiv.innerHTML = `Seats booked: ${data.seats.join(', ')}`;
+                    
+                    window.location.reload();  // Reload to update seat status
+                    
+                } else {
+                    messageDiv.innerHTML = data.message;
+                }
+            });
+        });
+    </script>
+</body>
+</html>
